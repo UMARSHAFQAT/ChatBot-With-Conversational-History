@@ -1,4 +1,4 @@
-import streamlit as st 
+import streamlit as st
 import os
 
 from langchain_groq import ChatGroq
@@ -7,17 +7,17 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import Runnable
 from langchain_core.messages import HumanMessage, AIMessage
 
-# 🔐 Embed your GROQ API Key directly (be careful with this)
+# 🔐 GROQ API Key (embedded directly — do NOT commit in public repos)
 api_key = "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"
 
 # Optional LangChain tracking
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "GROQ Chatbot with Memory"
 
-# Streamlit page config
+# Page setup
 st.set_page_config(page_title="GROQ Chatbot", page_icon="🤖", layout="wide")
 
-# Custom styling
+# Custom CSS styling
 st.markdown("""
     <style>
         .reportview-container { background-color: #1e1e1e; color: #ffffff; }
@@ -28,30 +28,34 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Header
-st.markdown("<h1 style='text-align: center; color: #00ffcc;'>🧠 UMAR'S Chatbot with Conversational History Powered By GROQ API</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>Ask me anything — I'll remember our conversation!</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #00ffcc;'>🧠 UMAR'S Chatbot with Conversational History</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>Ask me anything — I remember everything!</p>", unsafe_allow_html=True)
 
 # Sidebar
 with st.sidebar:
     st.markdown("### ⚙️ Model Settings")
     temperature = st.slider("Temperature", 0.0, 1.0, 0.7)
     max_tokens = st.slider("Max Tokens", 50, 1024, 300)
-    if st.button("🧹 Clear Chat"):
-        st.session_state.chat_history = []
-        st.experimental_rerun()
 
-# Session state for chat history
+    # ✅ Clear chat safely
+    if st.button("🧹 Clear Chat"):
+        if "chat_history" in st.session_state:
+            del st.session_state.chat_history
+        st.success("Chat cleared.")
+        st.stop()
+
+# Initialize chat history
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Create prompt with memory
+# Prompt template using message memory
 prompt = ChatPromptTemplate.from_messages([
     ("system", "You are a helpful assistant. Respond conversationally and remember context."),
     MessagesPlaceholder(variable_name="chat_history"),
     ("human", "{question}")
 ])
 
-# ✅ Initialize the model with groq_api_key (not api_key)
+# ChatGroq LLM
 llm = ChatGroq(
     model="llama3-8b-8192",
     groq_api_key=api_key,
@@ -59,27 +63,25 @@ llm = ChatGroq(
     max_tokens=max_tokens
 )
 
-# Create the chain
+# Build chain
 chain: Runnable = prompt | llm | StrOutputParser()
 
-# User input
+# User input box
 user_input = st.chat_input("Type your message...")
 
+# Handle user message and response
 if user_input:
-    # Add user message to history
     st.session_state.chat_history.append(HumanMessage(content=user_input))
 
-    # Invoke chain with chat history
     with st.spinner("Thinking..."):
         response = chain.invoke({
             "question": user_input,
             "chat_history": st.session_state.chat_history
         })
 
-    # Add AI response to history
     st.session_state.chat_history.append(AIMessage(content=response))
 
-# Display full conversation
+# Render chat history
 for msg in st.session_state.chat_history:
     role = "user" if isinstance(msg, HumanMessage) else "assistant"
     with st.chat_message(role):
