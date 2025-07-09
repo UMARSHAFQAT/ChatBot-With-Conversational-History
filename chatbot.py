@@ -37,12 +37,12 @@ with st.sidebar:
     temperature = st.slider("Temperature", 0.0, 1.0, 0.7)
     max_tokens = st.slider("Max Tokens", 50, 1024, 300)
 
-    # ✅ Clear chat safely
     if st.button("🧹 Clear Chat"):
-        if "chat_history" in st.session_state:
-            del st.session_state.chat_history
-        st.success("Chat cleared.")
-        st.stop()
+    if "chat_history" in st.session_state:
+        del st.session_state.chat_history  # or: st.session_state.chat_history = []
+    st.success("Chat cleared. You may continue.")
+    st.stop()  # ✅ Stops rerun safely
+
 
 # Initialize chat history
 if "chat_history" not in st.session_state:
