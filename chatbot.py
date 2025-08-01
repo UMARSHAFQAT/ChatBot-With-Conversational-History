@@ -7,9 +7,6 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import Runnable
 from langchain_core.messages import HumanMessage, AIMessage
 
-# 🔐 GROQ API Key (for testing; use env vars or secrets in production)
-api_key = "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"
-
 # Optional LangChain project tracking
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "GROQ Chatbot with History"
@@ -33,14 +30,21 @@ st.markdown("<p style='text-align: center;'>Ask me anything — I remember what 
 
 # Sidebar controls
 with st.sidebar:
+    st.markdown("### 🔑 Enter your GROQ API Key")
+    api_key = st.text_input("GROQ API Key", type="password")
+
     st.markdown("### ⚙️ Model Settings")
     temperature = st.slider("Temperature", 0.0, 1.0, 0.7)
     max_tokens = st.slider("Max Tokens", 50, 1024, 300)
 
-    # Clear chat safely (no st.stop)
     if st.button("🧹 Clear Chat"):
         st.session_state.chat_history = []
         st.success("Chat cleared. Start a new conversation!")
+
+# Require API key
+if not api_key:
+    st.warning("Please enter your GROQ API key to start chatting.")
+    st.stop()
 
 # Session state init
 if "chat_history" not in st.session_state:
@@ -53,7 +57,7 @@ prompt = ChatPromptTemplate.from_messages([
     ("human", "{question}")
 ])
 
-# Initialize GROQ LLM
+# Initialize GROQ LLM with user-provided key
 llm = ChatGroq(
     model="llama3-8b-8192",
     groq_api_key=api_key,
@@ -69,20 +73,15 @@ user_input = st.chat_input("Type your message...")
 
 # Chat logic
 if user_input:
-    # Add user input to chat history
     st.session_state.chat_history.append(HumanMessage(content=user_input))
-
-    # Generate response
     with st.spinner("Thinking..."):
         response = chain.invoke({
             "question": user_input,
             "chat_history": st.session_state.chat_history
         })
-
-    # Save bot response
     st.session_state.chat_history.append(AIMessage(content=response))
 
-# Display entire chat
+# Display chat history
 for msg in st.session_state.chat_history:
     role = "user" if isinstance(msg, HumanMessage) else "assistant"
     with st.chat_message(role):
